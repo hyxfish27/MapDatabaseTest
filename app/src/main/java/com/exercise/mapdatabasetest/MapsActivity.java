@@ -1,10 +1,5 @@
 package com.exercise.mapdatabasetest;
 
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentActivity;
-
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Address;
@@ -12,10 +7,18 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
+
+import com.exercise.mapdatabasetest.Model.DAUPlace;
+import com.exercise.mapdatabasetest.Model.Place;
+import com.exercise.mapdatabasetest.databinding.ActivityMapsBinding;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -24,21 +27,29 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.exercise.mapdatabasetest.databinding.ActivityMapsBinding;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.net.PasswordAuthentication;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
-        GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerDragListener {
+        GoogleMap.OnMapLongClickListener {
 
     private static final String TAG = "MapsActivity";
+
+    private HashMap<String, Marker> markers = new HashMap<String, Marker>();
 
     private GoogleMap mMap;
     private Geocoder geocoder;
@@ -46,6 +57,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private int ACCESS_LOCATION_REQUEST_CODE = 10001;
     FusedLocationProviderClient fusedLocationProviderClient;
+
+    DAUPlace dauPlace = new DAUPlace();
+    FirebaseDatabase firebaseDatabase = FirebaseDatabase.getInstance();
+    DatabaseReference databaseReference = firebaseDatabase.getReference("Place");
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,23 +78,85 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
 
         mMap.setOnMapLongClickListener(this);
-        mMap.setOnMarkerDragListener(this);
+
+        List<Place> placeList = new ArrayList<>();
+
+        databaseReference.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                Place place = dataSnapshot.getValue(Place.class);
+
+                // stash the key in the title, for recall later
+
+                Marker myMarker = mMap.addMarker(new MarkerOptions()
+                        .position(new LatLng(place.getPlatitude(), place.getPlongitude()))
+                        .title(dataSnapshot.getKey()));
+
+                // cache the marker locally
+                markers.put(dataSnapshot.getKey(), myMarker);
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+                Place place = dataSnapshot.getValue(Place.class);
+
+                // Move markers on the map if changed on Firebase
+                Marker changedMarker = markers.get(dataSnapshot.getKey());
+                changedMarker.setPosition(new LatLng(place.getPlatitude(), place.getPlongitude()));
+            }
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+                // When markers are removed from
+                Marker deadMarker = markers.get(dataSnapshot.getKey());
+                deadMarker.remove();
+
+                markers.remove(dataSnapshot.getKey());
+            }
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+                // This won't happen to our simple list, but log just in case
+                Log.v(TAG, "moved !" + dataSnapshot.getValue());
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Ignore cancelations (but log just in case)
+                Log.v(TAG, "canceled!" + databaseError.getMessage());
+            }
+        });
+
+        /*databaseReference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull @NotNull DataSnapshot dataSnapshot) {
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    Place place = snapshot.getValue(Place.class);
+                    //Log.d(TAG, "onDataChange: " + snapshot.child("platitude").toString());
+                    //Log.d(TAG, "onDataChange: " + snapshot.getValue(Place.class));
+                    placeList.add(place);
+                   // LatLng latLng = new LatLng(snapshot.child("platitude"), snapshot.child("plogitude"));
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull @NotNull DatabaseError error) {
+
+            }
+        });
+
+        for (Place p : placeList) {
+            LatLng latLng = new LatLng(p.getPlatitude(), p.getPlongitude());
+            mMap.addMarker(new MarkerOptions().position(latLng).title(latLng.latitude +", "+ latLng.longitude)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
+        }*/
+
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED) {
@@ -177,42 +255,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMapLongClick(@NonNull @NotNull LatLng latLng) {
-        try {
-            List<Address> addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
-            if (addresses.size() > 0) {
-                Address address = addresses.get(0);
-                String streetAddress = address.getAddressLine(0);
-                mMap.addMarker(new MarkerOptions().position(latLng).title(streetAddress).draggable(true)
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
+        Place place = new Place(latLng.latitude, latLng.longitude);
+        dauPlace.add(place).addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void unused) {
+                Log.d(TAG, "onSuccess: Add place successfully!!");
+                Toast.makeText(MapsActivity.this,"Successfully",Toast.LENGTH_SHORT).show();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onMarkerDragStart(@NonNull @NotNull Marker marker) {
-        Log.d(TAG, "onMarkerDragStart: ");
-    }
-
-    @Override
-    public void onMarkerDrag(@NonNull @NotNull Marker marker) {
-        Log.d(TAG, "onMarkerDrag: ");
-    }
-
-    @Override
-    public void onMarkerDragEnd(@NonNull @NotNull Marker marker) {
-        Log.d(TAG, "onMarkerDragEnd: ");
-        LatLng latLng = marker.getPosition();
-        try {
-            List<Address> addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
-            if (addresses.size() > 0) {
-                Address address = addresses.get(0);
-                String streetAddress = address.getAddressLine(0);
-                marker.setTitle(streetAddress);
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull @NotNull Exception e) {
+                Log.d(TAG, "onFailure: Failed to add place...");
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        });
+//        mMap.addMarker(new MarkerOptions().position(latLng).title(latLng.latitude +", "+ latLng.longitude).draggable(true)
+//                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
     }
 }
