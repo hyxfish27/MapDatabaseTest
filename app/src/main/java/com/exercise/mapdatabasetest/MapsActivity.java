@@ -27,9 +27,12 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
@@ -80,6 +83,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMapReady(@NotNull GoogleMap googleMap) {
+
         mMap = googleMap;
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
 
@@ -94,6 +98,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 // stash the key in the title, for recall later
                 if (place != null) {
                     int activity_type = place.getType();
+                    int width = 300;
+                    int height = 300;
                     BitmapDrawable bitmapDrawable;
 
                     switch (activity_type) {
@@ -101,7 +107,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             bitmapDrawable = (BitmapDrawable) ResourcesCompat.getDrawable(getResources(),R.drawable.icon_charity_3dmarker,null);
                             break;
                         case 2:
-                            bitmapDrawable = (BitmapDrawable)ResourcesCompat.getDrawable(getResources(),R.drawable.icon_charity_3dmarker,null);
+                            bitmapDrawable = (BitmapDrawable)ResourcesCompat.getDrawable(getResources(),R.drawable.icon_course_3dmarker,null);
                             break;
                         case 3:
                             bitmapDrawable = (BitmapDrawable)ResourcesCompat.getDrawable(getResources(),R.drawable.icon_discount_3dmarker,null);
@@ -117,7 +123,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                     assert bitmapDrawable != null;
                     Bitmap bitmap = bitmapDrawable.getBitmap();
-                    Bitmap bitmapMarker = Bitmap.createScaledBitmap(bitmap, 200, 200, false);
+                    Bitmap bitmapMarker = Bitmap.createScaledBitmap(bitmap, width, height, false);
 
                     Marker myMarker = mMap.addMarker(new MarkerOptions()
                             .position(new LatLng(place.getPlatitude(), place.getPlongitude()))
@@ -250,7 +256,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Task<Location> locationTask = fusedLocationProviderClient.getLastLocation();
         locationTask.addOnSuccessListener(location -> {
             LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,18));
+            CameraPosition cameraPosition = new CameraPosition.Builder()
+                    .target(latLng)
+                    .zoom(16)
+                    .tilt(65)
+                    .build();
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         });
         locationTask.addOnFailureListener(e -> Log.d(TAG, "onFailure: zoomToUserLocation Failed"));
 
@@ -285,9 +296,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public boolean onMarkerClick(@NonNull @NotNull Marker marker) {
+//        dauPlace = new DAUPlace();
+//        dauPlace.remove(marker.getTitle()).addOnSuccessListener(new OnSuccessListener<Void>() {
+//            @Override
+//            public void onSuccess(Void unused) {
+//                Toast.makeText(MapsActivity.this,"Successfully",Toast.LENGTH_SHORT).show();
+//            }
+//        }).addOnFailureListener(new OnFailureListener() {
+//            @Override
+//            public void onFailure(@NonNull @NotNull Exception e) {
+//                Toast.makeText(MapsActivity.this,"Failed delete place...",Toast.LENGTH_SHORT).show();
+//            }
+//        });
         String firebaseId = marker.getTitle();
-        assert firebaseId != null;
         databaseReference.child(firebaseId).removeValue();
-        return true;
+        return false;
     }
 }
