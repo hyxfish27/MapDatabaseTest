@@ -2,6 +2,8 @@ package com.exercise.mapdatabasetest;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -12,6 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import com.exercise.mapdatabasetest.Model.DAUPlace;
@@ -27,15 +30,12 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -45,17 +45,16 @@ import java.util.HashMap;
 import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
-        GoogleMap.OnMapLongClickListener {
+        GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener {
 
     private static final String TAG = "MapsActivity";
 
-    private HashMap<String, Marker> markers = new HashMap<String, Marker>();
+    private final HashMap<String, Marker> markers = new HashMap<>();
 
     private GoogleMap mMap;
     private Geocoder geocoder;
-    private ActivityMapsBinding binding;
 
-    private int ACCESS_LOCATION_REQUEST_CODE = 10001;
+    private final int ACCESS_LOCATION_REQUEST_CODE = 10001;
     FusedLocationProviderClient fusedLocationProviderClient;
 
     DAUPlace dauPlace = new DAUPlace();
@@ -67,19 +66,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        binding = ActivityMapsBinding.inflate(getLayoutInflater());
+        com.exercise.mapdatabasetest.databinding.ActivityMapsBinding binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+        assert mapFragment != null;
         mapFragment.getMapAsync(this);
         geocoder = new Geocoder(this);
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady(@NotNull GoogleMap googleMap) {
         mMap = googleMap;
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
 
@@ -89,45 +89,75 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         databaseReference.addChildEventListener(new ChildEventListener() {
             @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+            public void onChildAdded(@NotNull DataSnapshot dataSnapshot, String s) {
                 Place place = dataSnapshot.getValue(Place.class);
-
                 // stash the key in the title, for recall later
+                if (place != null) {
+                    int activity_type = place.getType();
+                    BitmapDrawable bitmapDrawable;
 
-                Marker myMarker = mMap.addMarker(new MarkerOptions()
-                        .position(new LatLng(place.getPlatitude(), place.getPlongitude()))
-                        .title(dataSnapshot.getKey()));
+                    switch (activity_type) {
+                        case 1:
+                            bitmapDrawable = (BitmapDrawable) ResourcesCompat.getDrawable(getResources(),R.drawable.icon_charity_3dmarker,null);
+                            break;
+                        case 2:
+                            bitmapDrawable = (BitmapDrawable)ResourcesCompat.getDrawable(getResources(),R.drawable.icon_charity_3dmarker,null);
+                            break;
+                        case 3:
+                            bitmapDrawable = (BitmapDrawable)ResourcesCompat.getDrawable(getResources(),R.drawable.icon_discount_3dmarker,null);
+                            break;
+                        case 4:
+                            bitmapDrawable = (BitmapDrawable)ResourcesCompat.getDrawable(getResources(),R.drawable.icon_leisure_3dmarker,null);
+                            break;
+                        case 5:
+                            bitmapDrawable = (BitmapDrawable)ResourcesCompat.getDrawable(getResources(),R.drawable.icon_sport_3dmarker,null);
+                            break;
+                        default:
+                            bitmapDrawable = (BitmapDrawable)ResourcesCompat.getDrawable(getResources(),R.drawable.icon_sport_3dmarker,null);
+                    }
+                    assert bitmapDrawable != null;
+                    Bitmap bitmap = bitmapDrawable.getBitmap();
+                    Bitmap bitmapMarker = Bitmap.createScaledBitmap(bitmap, 200, 200, false);
 
-                // cache the marker locally
-                markers.put(dataSnapshot.getKey(), myMarker);
+                    Marker myMarker = mMap.addMarker(new MarkerOptions()
+                            .position(new LatLng(place.getPlatitude(), place.getPlongitude()))
+                            .title(dataSnapshot.getKey())
+                            .icon(BitmapDescriptorFactory.fromBitmap(bitmapMarker)));
+
+                    // cache the marker locally
+                    markers.put(dataSnapshot.getKey(), myMarker);
+                }
             }
 
             @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+            public void onChildChanged(@NotNull DataSnapshot dataSnapshot, String s) {
                 Place place = dataSnapshot.getValue(Place.class);
 
                 // Move markers on the map if changed on Firebase
                 Marker changedMarker = markers.get(dataSnapshot.getKey());
+                assert changedMarker != null;
+                assert place != null;
                 changedMarker.setPosition(new LatLng(place.getPlatitude(), place.getPlongitude()));
             }
 
             @Override
-            public void onChildRemoved(DataSnapshot dataSnapshot) {
+            public void onChildRemoved(@NotNull DataSnapshot dataSnapshot) {
                 // When markers are removed from
                 Marker deadMarker = markers.get(dataSnapshot.getKey());
+                assert deadMarker != null;
                 deadMarker.remove();
 
                 markers.remove(dataSnapshot.getKey());
             }
 
             @Override
-            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+            public void onChildMoved(@NotNull DataSnapshot dataSnapshot, String s) {
                 // This won't happen to our simple list, but log just in case
                 Log.v(TAG, "moved !" + dataSnapshot.getValue());
             }
 
             @Override
-            public void onCancelled(DatabaseError databaseError) {
+            public void onCancelled(@NotNull DatabaseError databaseError) {
                 // Ignore cancelations (but log just in case)
                 Log.v(TAG, "canceled!" + databaseError.getMessage());
             }
@@ -163,14 +193,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             enableUserLocation();
             zoomToUserLocation();
         } else {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                //We can show user a dialog why this permission is necessary
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        ACCESS_LOCATION_REQUEST_CODE);
-            } else {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        ACCESS_LOCATION_REQUEST_CODE);
-            }
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    ACCESS_LOCATION_REQUEST_CODE);
         }
 
         // Add a marker in Sydney and move the camera
@@ -224,19 +248,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return;
         }
         Task<Location> locationTask = fusedLocationProviderClient.getLastLocation();
-        locationTask.addOnSuccessListener(new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
-                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,18));
-            }
+        locationTask.addOnSuccessListener(location -> {
+            LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,18));
         });
-        locationTask.addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull @NotNull Exception e) {
-                Log.d(TAG, "onFailure: zoomToUserLocation Failed");
-            }
-        });
+        locationTask.addOnFailureListener(e -> Log.d(TAG, "onFailure: zoomToUserLocation Failed"));
 
     }
 
@@ -255,20 +271,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMapLongClick(@NonNull @NotNull LatLng latLng) {
-        Place place = new Place(latLng.latitude, latLng.longitude);
-        dauPlace.add(place).addOnSuccessListener(new OnSuccessListener<Void>() {
-            @Override
-            public void onSuccess(Void unused) {
-                Log.d(TAG, "onSuccess: Add place successfully!!");
-                Toast.makeText(MapsActivity.this,"Successfully",Toast.LENGTH_SHORT).show();
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull @NotNull Exception e) {
-                Log.d(TAG, "onFailure: Failed to add place...");
-            }
-        });
+        int type = (int)(Math.random() * 5 + 1);
+        Place place = new Place(latLng.latitude, latLng.longitude, type);
+        dauPlace.add(place).addOnSuccessListener(unused -> {
+            Log.d(TAG, "onSuccess: Add place successfully!!");
+            Toast.makeText(MapsActivity.this,"Successfully",Toast.LENGTH_SHORT).show();
+        }).addOnFailureListener(e -> Log.d(TAG, "onFailure: Failed to add place..."));
 //        mMap.addMarker(new MarkerOptions().position(latLng).title(latLng.latitude +", "+ latLng.longitude).draggable(true)
 //                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)));
+    }
+
+
+
+    @Override
+    public boolean onMarkerClick(@NonNull @NotNull Marker marker) {
+        String firebaseId = marker.getTitle();
+        assert firebaseId != null;
+        databaseReference.child(firebaseId).removeValue();
+        return true;
     }
 }

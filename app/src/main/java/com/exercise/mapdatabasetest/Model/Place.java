@@ -10,12 +10,14 @@ public class Place {
     private String key;
     private double platitude;
     private double plongitude;
+    private int type;
 
     public Place() {}
 
-    public Place(double platitude, double plongitude) {
+    public Place(double platitude, double plongitude, int type) {
         this.platitude = platitude;
         this.plongitude = plongitude;
+        this.type = type;
     }
 
     public String getKey() {
@@ -40,5 +42,13 @@ public class Place {
 
     public void setPlongitude(double plongitude) {
         this.plongitude = plongitude;
+    }
+
+    public int getType() {
+        return type;
+    }
+
+    public void setType(int type) {
+        this.type = type;
     }
 }
