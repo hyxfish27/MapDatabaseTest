@@ -48,7 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
-        GoogleMap.OnMapLongClickListener, GoogleMap.OnMarkerClickListener {
+        GoogleMap.OnMapLongClickListener {
 
     private static final String TAG = "MapsActivity";
 
@@ -225,6 +225,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(@NonNull @NotNull Marker marker) {
+                dauPlace = new DAUPlace();
+                dauPlace.remove(marker.getTitle()).addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void unused) {
+                        Toast.makeText(MapsActivity.this,"Successfully",Toast.LENGTH_SHORT).show();
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull @NotNull Exception e) {
+                        Toast.makeText(MapsActivity.this,"Failed delete place...",Toast.LENGTH_SHORT).show();
+                    }
+                });
+                return false;
+            }
+        });
     }
 
     private void enableUserLocation() {
@@ -294,7 +313,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    @Override
+    /*@Override
     public boolean onMarkerClick(@NonNull @NotNull Marker marker) {
 //        dauPlace = new DAUPlace();
 //        dauPlace.remove(marker.getTitle()).addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -308,8 +327,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 //                Toast.makeText(MapsActivity.this,"Failed delete place...",Toast.LENGTH_SHORT).show();
 //            }
 //        });
-        String firebaseId = marker.getTitle();
-        databaseReference.child(firebaseId).removeValue();
-        return false;
-    }
+//        String firebaseId = marker.getTitle();
+//        databaseReference.child(firebaseId).removeValue();
+//        return false;
+    }*/
 }
