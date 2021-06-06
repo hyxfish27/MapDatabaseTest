@@ -24,8 +24,10 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.GoogleMapOptions;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
@@ -79,13 +81,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
         geocoder = new Geocoder(this);
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
+        //UiSettings uis = mMap.getUiSettings();
+        //mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+        GoogleMapOptions googleMapOptions = new GoogleMapOptions();
+        googleMapOptions.mapType(GoogleMap.MAP_TYPE_NORMAL)
+                .zoomControlsEnabled(false)
+                .tiltGesturesEnabled(false)
+                .scrollGesturesEnabled(true)
+                .rotateGesturesEnabled(true)
+                .zoomGesturesEnabled(true)
+                .compassEnabled(true);
     }
 
     @Override
     public void onMapReady(@NotNull GoogleMap googleMap) {
 
         mMap = googleMap;
-        mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
 
         mMap.setOnMapLongClickListener(this);
 
@@ -243,6 +255,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
+
+
     private void enableUserLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
@@ -274,8 +288,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
             CameraPosition cameraPosition = new CameraPosition.Builder()
                     .target(latLng)
+                    .tilt(70)
                     .zoom(16)
-                    .tilt(65)
                     .build();
             mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         });
