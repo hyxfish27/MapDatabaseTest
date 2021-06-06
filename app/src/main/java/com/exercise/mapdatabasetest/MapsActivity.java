@@ -226,23 +226,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             e.printStackTrace();
         }
 
-        googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
-            @Override
-            public boolean onMarkerClick(@NonNull @NotNull Marker marker) {
-                dauPlace = new DAUPlace();
-                dauPlace.remove(marker.getTitle()).addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void unused) {
-                        Toast.makeText(MapsActivity.this,"Successfully",Toast.LENGTH_SHORT).show();
-                    }
-                }).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull @NotNull Exception e) {
-                        Toast.makeText(MapsActivity.this,"Failed delete place...",Toast.LENGTH_SHORT).show();
-                    }
-                });
-                return false;
-            }
+        googleMap.setOnMarkerClickListener(marker -> {
+            dauPlace = new DAUPlace();
+            dauPlace.remove(marker.getTitle()).addOnSuccessListener(new OnSuccessListener<Void>() {
+                @Override
+                public void onSuccess(Void unused) {
+                    Toast.makeText(MapsActivity.this,"Successfully",Toast.LENGTH_SHORT).show();
+                }
+            }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull @NotNull Exception e) {
+                    Toast.makeText(MapsActivity.this,"Failed delete place...",Toast.LENGTH_SHORT).show();
+                }
+            });
+            return false;
         });
     }
 
