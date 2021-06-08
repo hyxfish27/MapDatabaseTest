@@ -22,6 +22,9 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -29,6 +32,7 @@ import com.google.android.gms.tasks.Task;
 import org.jetbrains.annotations.NotNull;
 
 public class LPCheckActivity extends FragmentActivity {
+
 //    private static final String TAG = "LPCheckActivity";
 //    int LOCATION_REQUEST_CODE = 10001;
 //
